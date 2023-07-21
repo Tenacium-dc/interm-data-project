@@ -1,0 +1,105 @@
+package com.example;
+
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.*;
+
+import org.apache.arrow.memory.RootAllocator;
+import org.apache.arrow.vector.ipc.ArrowFileReader;
+import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
+import org.apache.arrow.vector.VectorSchemaRoot;
+import org.apache.arrow.vector.VectorUnloader;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+
+public class ParquetToCsvConverterTest {
+
+    private ParquetToCsvConverter converter;
+
+    @Before
+    public void setUp() {
+        converter = new ParquetToCsvConverter();
+    }
+
+    @Test
+    public void testConvertParquetToCsv() throws IOException {
+        // Mock data for the Parquet file
+        List<String> columnNames = Arrays.asList("Name", "Age", "City");
+        List<List<Object>> data = Arrays.asList(
+            Arrays.asList("John", 25, "New York"),
+            Arrays.asList("Alice", 30, "San Francisco"),
+            Arrays.asList("Bob", 22, "Chicago")
+        );
+
+        // Mock the ArrowFileReader, VectorSchemaRoot, and ArrowRecordBatch
+        ArrowFileReader mockFileReader = mock(ArrowFileReader.class);
+        VectorSchemaRoot mockRoot = mock(VectorSchemaRoot.class);
+        ArrowRecordBatch mockBatch = mock(ArrowRecordBatch.class);
+
+        // Set up mock behavior for the ArrowFileReader
+        when(mockFileReader.getVectorSchemaRoot()).thenReturn(mockRoot);
+        when(mockFileReader.loadNextBatch()).thenReturn(true, false); // Simulate two batches
+
+        // Set up mock behavior for the VectorSchemaRoot
+        when(mockRoot.getFieldVectors()).thenReturn(createMockFieldVectors(columnNames, data));
+
+        // Set up mock behavior for the ArrowRecordBatch
+        when(mockFileReader.getRecordBatch()).thenReturn(mockBatch);
+        when(mockBatch.getLength()).thenReturn(data.size());
+
+        // Mock VectorUnloader
+        VectorUnloader mockUnloader = mock(VectorUnloader.class);
+        when(mockUnloader.getRecordBatchLoader(mockBatch)).thenReturn(mockUnloader);
+
+        // Capture the output from the FileWriter using ArgumentCaptor
+        FileWriter mockWriter = mock(FileWriter.class);
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+
+        // Call the method to be tested
+        converter.convertParquetToCsv("test_input.parquet", "test_output.csv", mockFileReader, mockWriter);
+
+        // Verify the FileWriter was called with the correct CSV content
+        verify(mockWriter, times(data.size())).write(captor.capture());
+        List<String> capturedCsvRows = captor.getAllValues();
+
+        // Define the expected CSV rows based on the mock data
+        List<String> expectedCsvRows = Arrays.asList(
+                "John,25,New York" + System.lineSeparator(),
+                "Alice,30,San Francisco" + System.lineSeparator(),
+                "Bob,22,Chicago" + System.lineSeparator()
+        );
+
+        // Assert that the actual CSV rows match the expected ones
+        assertEquals(expectedCsvRows, capturedCsvRows);
+    }
+
+    // Helper method to create mock field vectors based on mock data
+    private List<FieldVector> createMockFieldVectors(List<String> columnNames, List<List<Object>> data) {
+        List<FieldVector> mockFieldVectors = new ArrayList<>();
+        for (int columnIndex = 0; columnIndex < columnNames.size(); columnIndex++) {
+            String columnName = columnNames.get(columnIndex);
+            List<Object> columnData = getColumnData(data, columnIndex);
+
+            FieldVector mockFieldVector = mock(FieldVector.class);
+            when(mockFieldVector.getField()).thenReturn(new FieldType(true, new ArrowType.Int(32, true), null));
+            when(mockFieldVector.getName()).thenReturn(columnName);
+            when(mockFieldVector.getValueCount()).thenReturn(columnData.size());
+
+            ValueVector.Accessor accessor = mock(ValueVector.Accessor.class);
+            when(accessor.getObject(anyInt())).thenAnswer(invocation -> columnData.get(invocation.getArgument(0)));
+            when(mockFieldVector.getAccessor()).thenReturn(accessor);
+
+            mockFieldVectors.add(mockFieldVector);
+        }
+        return mockFieldVectors;
+    }
+
+    // Helper method to extract a column from the mock data
+    private List<Object> getColumnData(List<List<Object>> data, int columnIndex) {
+        return data.stream().map(row -> row.get(columnIndex)).collect(Collectors.toList());
+    }
+}
