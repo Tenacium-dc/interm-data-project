@@ -1,116 +1,98 @@
 package converter;
 
 import java.io.BufferedWriter;
-import java.io.FileWriter;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.parquet.column.ColumnDescriptor;
-import org.apache.parquet.example.data.Group;
-import org.apache.parquet.hadoop.ParquetFileReader;
-import org.apache.parquet.hadoop.ParquetReader;
-import org.apache.parquet.hadoop.example.GroupReadSupport;
-import org.apache.parquet.schema.MessageType;
-import org.apache.parquet.schema.PrimitiveType;
+import java.io.OutputStreamWriter;
+import org.apache.avro.Schema;
+import org.apache.avro.file.DataFileReader;
+import org.apache.avro.generic.GenericDatumReader;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.io.DatumReader;
 
+/**
+ * A utility class to convert Parquet files to CSV format.
+ */
 public class ParquetToCsvConverter {
 
+  private ParquetToCsvConverter() {}
+
+  /**
+   * Converts a Parquet file to a CSV file.
+   *
+   * @param inputParquetFile The path to the input Parquet file.
+   * @param outputFolder The output folder to save the generated CSV file.
+   * @return The path of the generated CSV file, or null if conversion fails.
+   * @throws IOException If an I/O error occurs.
+   */
   public static String convertParquetToCsv(String inputParquetFile, String outputFolder)
       throws IOException {
-    Configuration conf = new Configuration();
-    Path file = new Path(inputParquetFile);
-    MessageType parquetSchema;
+    File parquetFile = new File(inputParquetFile);
 
-    try (ParquetFileReader reader = ParquetFileReader.open(conf, file)) {
-      parquetSchema = reader.getFooter().getFileMetaData().getSchema();
+    if (!parquetFile.exists()) {
+      System.err.println("Parquet file not found: " + inputParquetFile);
+      return null;
     }
 
-    ParquetReader<Group> reader =
-        ParquetReader.builder(new GroupReadSupport(), file).withConf(conf).build();
-
-    List<String> csvLines = new ArrayList<>();
-    Group group;
-    while ((group = reader.read()) != null) {
-      csvLines.add(groupToCsv(group, parquetSchema));
+    if (!parquetFile.isFile()) {
+      System.err.println("Input path is not a file: " + inputParquetFile);
+      return null;
     }
 
-    reader.close();
+    try (DataFileReader<GenericRecord> dataFileReader = openParquetFile(inputParquetFile)) {
+      Schema schema = dataFileReader.getSchema();
+      StringBuilder csvContent = new StringBuilder();
 
-    if (!csvLines.isEmpty()) {
-      String outputCsvFile = generateCsvFileName(outputFolder);
-      writeCsvFile(outputCsvFile, csvLines);
-      return outputCsvFile;
-    }
-
-    return null;
-  }
-
-  private static String groupToCsv(Group group, MessageType schema) {
-    StringBuilder csvLine = new StringBuilder();
-
-    List<ColumnDescriptor> columns = schema.getColumns();
-    for (ColumnDescriptor column : columns) {
-      String columnName = column.getPath()[0];
-      PrimitiveType.PrimitiveTypeName columnType = column.getPrimitiveType().getPrimitiveTypeName();
-      String columnValue = getValueAsString(group, columnName, columnType);
-      csvLine.append(columnValue).append(",");
-    }
-
-    // Remove the trailing comma
-    csvLine.setLength(csvLine.length() - 1);
-
-    return csvLine.toString();
-  }
-
-  private static String getValueAsString(Group group, String columnName,
-      PrimitiveType.PrimitiveTypeName columnType) {
-    String columnValue;
-    int repetitionCount = group.getFieldRepetitionCount(columnName);
-    if (repetitionCount > 0) {
-      switch (columnType) {
-        case INT32:
-          columnValue = Integer.toString(group.getInteger(columnName, 0));
-          break;
-        case INT64:
-          columnValue = Long.toString(group.getLong(columnName, 0));
-          break;
-        case FLOAT:
-          columnValue = Float.toString(group.getFloat(columnName, 0));
-          break;
-        case DOUBLE:
-          columnValue = Double.toString(group.getDouble(columnName, 0));
-          break;
-        case BOOLEAN:
-          columnValue = Boolean.toString(group.getBoolean(columnName, 0));
-          break;
-        case BINARY:
-        case FIXED_LEN_BYTE_ARRAY:
-          columnValue = group.getBinary(columnName, 0).toStringUsingUTF8();
-          break;
-        default:
-          columnValue = ""; // Handle other types as needed
-          break;
+      // Construct CSV header
+      for (Schema.Field field : schema.getFields()) {
+        csvContent.append(field.name()).append(",");
       }
-    } else {
-      columnValue = ""; // Column is not set (null or missing)
-    }
-    return columnValue;
-  }
+      csvContent.setLength(csvContent.length() - 1); // Remove trailing comma
+      csvContent.append("\n");
 
-
-  private static void writeCsvFile(String outputCsvFile, List<String> csvLines) throws IOException {
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputCsvFile))) {
-      for (String line : csvLines) {
-        writer.write(line);
-        writer.newLine();
+      // Append records to CSV
+      for (GenericRecord record : dataFileReader) {
+        for (Schema.Field field : schema.getFields()) {
+          csvContent.append(record.get(field.name())).append(",");
+        }
+        csvContent.setLength(csvContent.length() - 1); // Remove trailing comma
+        csvContent.append("\n");
       }
+
+      // Extract the source Parquet file name without extension
+      String parquetFileName = parquetFile.getName();
+      String parquetFileNameWithoutExtension =
+          parquetFileName.substring(0, parquetFileName.lastIndexOf('.'));
+
+      // Write CSV content to file with the same name as the source Parquet file
+      String csvFileName = parquetFileNameWithoutExtension + ".csv";
+      String csvFilePath = outputFolder + File.separator + csvFileName;
+      try (BufferedWriter bw =
+          new BufferedWriter(new OutputStreamWriter(new FileOutputStream(csvFilePath)))) {
+        bw.write(csvContent.toString());
+      }
+
+      // Return the path of the generated CSV file
+      return csvFilePath;
+    } catch (IOException e) {
+      System.err.println("Error converting Parquet file: " + parquetFile.getName());
+      e.printStackTrace();
+      return null; // Return null in case of any error during conversion
     }
   }
 
-  private static String generateCsvFileName(String outputFolder) {
-    return outputFolder + "/output_" + System.currentTimeMillis() + ".csv";
+  /**
+   * Opens the Parquet file for reading.
+   *
+   * @param inputParquetFile The path to the input Parquet file.
+   * @return The DataFileReader instance for the Parquet file.
+   * @throws IOException If an I/O error occurs.
+   */
+  private static DataFileReader<GenericRecord> openParquetFile(String inputParquetFile)
+      throws IOException {
+    File file = new File(inputParquetFile);
+    DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
+    return new DataFileReader<>(file, datumReader);
   }
 }
-
