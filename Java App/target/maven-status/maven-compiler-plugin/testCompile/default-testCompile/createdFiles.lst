@@ -1,0 +1,5 @@
+converter\ExcelToCsvConverterTest.class
+converter\AvroToCsvConverterTest.class
+converter\FileDetectorTest.class
+converter\JsonToCsvConverterTest.class
+converter\ParquetToCsvConverterTest.class

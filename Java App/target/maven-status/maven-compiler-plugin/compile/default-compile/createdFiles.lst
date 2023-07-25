@@ -1,0 +1,6 @@
+converter\FileDetector.class
+converter\ParquetToCsvConverter.class
+converter\JsonToCsvConverter.class
+converter\ParquetToCsvConverter$1.class
+converter\ExcelToCsvConverter.class
+converter\AvroToCsvConverter.class
