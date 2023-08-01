@@ -16,6 +16,7 @@ import org.apache.avro.io.DatumReader;
  */
 public class ParquetToCsvConverter {
 
+  // Private constructor to prevent instantiation, as this is a utility class.
   private ParquetToCsvConverter() {}
 
   /**
@@ -28,44 +29,51 @@ public class ParquetToCsvConverter {
    */
   public static String convertParquetToCsv(String inputParquetFile, String outputFolder)
       throws IOException {
+    // Create a File instance for the input Parquet file.
     File parquetFile = new File(inputParquetFile);
 
+    // Check if the Parquet file exists.
     if (!parquetFile.exists()) {
       System.err.println("Parquet file not found: " + inputParquetFile);
       return null;
     }
 
+    // Check if the input path is a file.
     if (!parquetFile.isFile()) {
       System.err.println("Input path is not a file: " + inputParquetFile);
       return null;
     }
 
+    // Open the Parquet file for reading using try-with-resources to ensure proper resource
+    // management.
     try (DataFileReader<GenericRecord> dataFileReader = openParquetFile(inputParquetFile)) {
+      // Get the schema of the Parquet file.
       Schema schema = dataFileReader.getSchema();
+      // StringBuilder to store the CSV content.
       StringBuilder csvContent = new StringBuilder();
 
-      // Construct CSV header
+      // Construct CSV header.
       for (Schema.Field field : schema.getFields()) {
         csvContent.append(field.name()).append(",");
       }
-      csvContent.setLength(csvContent.length() - 1); // Remove trailing comma
+      csvContent.setLength(csvContent.length() - 1); // Remove trailing comma.
       csvContent.append("\n");
 
-      // Append records to CSV
+      // Append records to CSV.
       for (GenericRecord record : dataFileReader) {
         for (Schema.Field field : schema.getFields()) {
           csvContent.append(record.get(field.name())).append(",");
         }
-        csvContent.setLength(csvContent.length() - 1); // Remove trailing comma
+        csvContent.setLength(csvContent.length() - 1); // Remove trailing comma.
         csvContent.append("\n");
       }
 
-      // Extract the source Parquet file name without extension
+      // Extract the source Parquet file name without extension.
       String parquetFileName = parquetFile.getName();
       String parquetFileNameWithoutExtension =
           parquetFileName.substring(0, parquetFileName.lastIndexOf('.'));
 
-      // Write CSV content to file with the same name as the source Parquet file
+      // Write CSV content to file with the same name as the source Parquet file.
       String csvFileName = parquetFileNameWithoutExtension + ".csv";
       String csvFilePath = outputFolder + File.separator + csvFileName;
       try (BufferedWriter bw =
@@ -73,12 +81,12 @@ public class ParquetToCsvConverter {
         bw.write(csvContent.toString());
       }
 
-      // Return the path of the generated CSV file
+      // Return the path of the generated CSV file.
       return csvFilePath;
     } catch (IOException e) {
       System.err.println("Error converting Parquet file: " + parquetFile.getName());
       e.printStackTrace();
-      return null; // Return null in case of any error during conversion
+      return null; // Return null in case of any error during conversion.
     }
   }
 
@@ -91,8 +99,11 @@ public class ParquetToCsvConverter {
    */
   private static DataFileReader<GenericRecord> openParquetFile(String inputParquetFile)
       throws IOException {
+    // Create a File instance for the input Parquet file.
     File file = new File(inputParquetFile);
+    // Create a DatumReader to read Avro GenericRecords.
     DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
+    // Return the DataFileReader for the Parquet file.
     return new DataFileReader<>(file, datumReader);
   }
 }

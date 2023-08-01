@@ -16,6 +16,7 @@ import org.apache.avro.io.DatumReader;
  */
 public class AvroToCsvConverter {
 
+  // Private constructor to prevent instantiation, as this is a utility class.
   private AvroToCsvConverter() {}
 
   /**
@@ -28,19 +29,22 @@ public class AvroToCsvConverter {
    */
   public static String convertAvroToCsv(String avroFilePath, String outputFolder)
       throws IOException {
+    // Open the Avro file for reading using try-with-resources to ensure proper resource management.
     try (DataFileReader<GenericRecord> dataFileReader = openAvroFile(avroFilePath)) {
+      // Get the schema from the Avro file.
       Schema schema = dataFileReader.getSchema();
       StringBuilder csvContent = new StringBuilder();
 
-      // Construct CSV header
+      // Construct the CSV header using the Avro schema's field names.
       for (Schema.Field field : schema.getFields()) {
         csvContent.append(field.name()).append(",");
       }
       csvContent.setLength(csvContent.length() - 1); // Remove trailing comma
       csvContent.append("\n");
 
-      // Append records to CSV
+      // Append records to the CSV content.
       for (GenericRecord avroRecord : dataFileReader) {
+        // Extract data from each field of the Avro record and append to CSV content.
         for (Schema.Field field : schema.getFields()) {
           csvContent.append(avroRecord.get(field.name())).append(",");
         }
@@ -48,26 +52,27 @@ public class AvroToCsvConverter {
         csvContent.append("\n");
       }
 
-      // Extract the source Avro file name without extension
+      // Extract the source Avro file name without extension.
       String avroFileName = new File(avroFilePath).getName();
       String avroFileNameWithoutExtension =
           avroFileName.substring(0, avroFileName.lastIndexOf('.'));
 
-      // Write CSV content to file with the same name as the source Avro file
+      // Create a CSV file with the same name as the source Avro file.
       String csvFileName = avroFileNameWithoutExtension + ".csv";
       String csvFilePath = outputFolder + File.separator + csvFileName;
+      // Write the CSV content to the created CSV file using try-with-resources.
       try (BufferedWriter bw =
           new BufferedWriter(new OutputStreamWriter(new FileOutputStream(csvFilePath)))) {
         bw.write(csvContent.toString());
       }
 
-      // Return the path of the generated CSV file
+      // Return the path of the generated CSV file.
       return csvFilePath;
     }
   }
 
   /**
-   * Opens an Avro file for reading.
+   * Opens an Avro file for reading and returns a DataFileReader instance.
    *
    * @param avroFilePath The path of the input Avro file.
    * @return A DataFileReader instance for reading Avro records.
@@ -75,8 +80,11 @@ public class AvroToCsvConverter {
    */
   private static DataFileReader<GenericRecord> openAvroFile(String avroFilePath)
       throws IOException {
+    // Create a File instance from the provided Avro file path.
     File file = new File(avroFilePath);
+    // Create a GenericDatumReader to read Avro records.
     DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
+    // Return a DataFileReader instance for the Avro file using the datumReader.
     return new DataFileReader<>(file, datumReader);
   }
 }

@@ -22,8 +22,10 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
  */
 public class ExcelToCsvConverter {
 
+  // Private constructor to prevent instantiation, as this is a utility class.
   private ExcelToCsvConverter() {}
 
+  // Logger to log any errors or exceptions that occur during the conversion process.
   private static final Logger LOGGER = Logger.getLogger(ExcelToCsvConverter.class.getName());
 
   /**
@@ -36,41 +38,52 @@ public class ExcelToCsvConverter {
    */
   public static String convertExcelToCsv(String excelFilePath, String outputFolder)
       throws IOException {
+    // Create a File instance for the input Excel file.
     File excelFile = new File(excelFilePath);
 
+    // Check if the Excel file exists.
     if (!excelFile.exists()) {
       logError(() -> "Excel file not found: " + excelFilePath);
       return null;
     }
 
+    // Check if the input path is a file.
     if (!excelFile.isFile()) {
       logError(() -> "Input path is not a file: " + excelFilePath);
       return null;
     }
 
+    // Open the Excel file for reading using try-with-resources to ensure proper resource
+    // management.
     try (FileInputStream fis = new FileInputStream(excelFilePath);
         Workbook workbook = getWorkbook(fis, excelFile.getName())) {
 
-      String convertedCsvFilePath = null;
-      int sheetCounter = 1; // Initialize the sheet counter
+      String convertedCsvFilePath = null; // Initialise the variable to store the CSV file path.
+      int sheetCounter = 1; // Initialise the sheet counter for naming multiple CSV files.
 
+      // Loop through each sheet in the workbook.
       for (int sheetIndex = 0; sheetIndex < workbook.getNumberOfSheets(); sheetIndex++) {
         Sheet sheet = workbook.getSheetAt(sheetIndex);
+
+        // Create a CSV file path for the current sheet.
         String csvFilePath = outputFolder + File.separator
             + excelFile.getName().replace(".xlsx", "") + "-Sheet" + sheetCounter++ + ".csv";
 
+        // Open a FileWriter and BufferedWriter for writing the CSV content to the file.
         try (FileWriter fw = new FileWriter(csvFilePath);
             BufferedWriter bw = new BufferedWriter(fw)) {
 
           DataFormatter dataFormatter = new DataFormatter();
 
+          // Loop through each row in the sheet.
           for (Row row : sheet) {
             StringBuilder csvRow = new StringBuilder();
+            // Loop through each cell in the row and append its value to the CSV row.
             for (Cell cell : row) {
               String cellValue = dataFormatter.formatCellValue(cell);
               csvRow.append(cellValue).append(",");
             }
-            // Check if csvRow is not empty before removing the trailing comma
+            // Check if csvRow is not empty before removing the trailing comma.
             if (csvRow.length() > 0) {
               // Remove the trailing comma and add a newline character at the end of each row.
               bw.write(csvRow.substring(0, csvRow.length() - 1));
@@ -78,14 +91,17 @@ public class ExcelToCsvConverter {
             }
           }
 
-          convertedCsvFilePath = csvFilePath; // Save the CSV file path after successful conversion
+          // Save the CSV file path after successful conversion.
+          convertedCsvFilePath = csvFilePath;
         }
       }
 
-      return convertedCsvFilePath; // Return the output CSV file path if conversion is successful
+      // Return the output CSV file path if conversion is successful.
+      return convertedCsvFilePath;
     } catch (IOException e) {
+      // Log error and return null in case of any error during conversion.
       logError(() -> "Error converting Excel file: " + excelFile.getName(), e);
-      return null; // Return null in case of any error during conversion
+      return null;
     }
   }
 
@@ -99,13 +115,14 @@ public class ExcelToCsvConverter {
    */
   private static Workbook getWorkbook(FileInputStream fis, String fileName) throws IOException {
     try {
-      // Try to open the file as XSSFWorkbook (XLSX format)
+      // Try to open the file as XSSFWorkbook (XLSX format).
       return new XSSFWorkbook(fis);
     } catch (OfficeXmlFileException e) {
-      // If it's not XLSX format, try to open as HSSFWorkbook (XLS format)
-      fis.getChannel().position(0); // Reset the input stream to the beginning
+      // If it's not XLSX format, try to open as HSSFWorkbook (XLS format).
+      fis.getChannel().position(0); // Reset the input stream to the beginning.
       return new HSSFWorkbook(fis);
     } catch (Exception e) {
+      // Log error and throw an exception for unsupported file formats.
       logError(() -> "Unsupported file format: " + fileName, e);
       throw new IllegalArgumentException("Unsupported file format: " + fileName, e);
     }
@@ -117,6 +134,7 @@ public class ExcelToCsvConverter {
    * @param messageSupplier The supplier to provide the error message.
    */
   private static void logError(Supplier<String> messageSupplier) {
+    // Log the error message using the LOGGER at the SEVERE level.
     if (LOGGER.isLoggable(Level.SEVERE)) {
       LOGGER.severe(messageSupplier.get());
     }
@@ -129,6 +147,7 @@ public class ExcelToCsvConverter {
    * @param exception The exception to be logged.
    */
   private static void logError(Supplier<String> messageSupplier, Throwable exception) {
+    // Log the error message with the given exception using the LOGGER at the SEVERE level.
     if (LOGGER.isLoggable(Level.SEVERE)) {
       LOGGER.log(Level.SEVERE, messageSupplier.get(), exception);
     }

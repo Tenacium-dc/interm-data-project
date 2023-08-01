@@ -21,32 +21,41 @@ public class InterfaceMain {
     String sourceFolder = "C:\\Users\\tejas\\Documents\\Interface Files Store";
     String outputFolder = "C:\\Users\\tejas\\Documents\\CSV Outputs";
 
+    // A set to store names of unsupported files during conversion.
     Set<String> unsupportedFiles = new HashSet<>();
 
+    // Get a list of files from the source folder.
     File[] filesInSourceFolder = new File(sourceFolder).listFiles();
     if (filesInSourceFolder != null) {
+      // Loop through each file in the source folder for conversion.
       for (File file : filesInSourceFolder) {
         try {
+          // Detect the file type using the FileDetector class.
           String fileType = FileDetector.detectFileType(file.getAbsolutePath());
+          // If the file type is not supported, add it to the set and continue to the next file.
           if (fileType.equals("File type is not supported")) {
             unsupportedFiles.add(file.getName());
             continue;
           }
+          // Convert the file to CSV and get the path of the generated CSV file.
           String csvFilePath = convertFileToCsv(fileType, file.getAbsolutePath(), outputFolder);
           if (csvFilePath != null) {
+            // Print success message if the conversion was successful.
             System.out.println(
                 "Converted " + fileType + " file: " + file.getName() + " to CSV: " + csvFilePath);
           } else {
+            // Print error message if the conversion failed.
             System.out.println("Failed to convert " + fileType + " file: " + file.getName());
           }
         } catch (IOException e) {
+          // Print error message and stack trace if an I/O error occurs during conversion.
           System.err.println("Error converting file: " + file.getName());
           e.printStackTrace();
         }
       }
     }
 
-    // Print unsupported files
+    // Print unsupported files that were detected during conversion.
     for (String fileName : unsupportedFiles) {
       System.err.println("File type is not supported: " + fileName);
     }
@@ -64,10 +73,12 @@ public class InterfaceMain {
   private static String convertFileToCsv(String fileType, String filePath, String outputFolder)
       throws IOException {
     try {
+      // Use a switch statement to handle different file types and call the appropriate converter.
       switch (fileType) {
         case "Excel":
           return ExcelToCsvConverter.convertExcelToCsv(filePath, outputFolder);
         case "JSON":
+          // Read JSON data from the input file and convert it to CSV using JsonToCsvConverter.
           String jsonData = new String(Files.readAllBytes(new File(filePath).toPath()));
           return JsonToCsvConverter.convertJsonStringToCsv(jsonData, outputFolder);
         case "Avro":
@@ -75,9 +86,11 @@ public class InterfaceMain {
         case "Parquet":
           return ParquetToCsvConverter.convertParquetToCsv(filePath, outputFolder);
         default:
+          // Throw an exception for unsupported file types.
           throw new IOException("Unsupported file format: " + fileType);
       }
     } catch (IllegalArgumentException e) {
+      // Catch any exceptions related to unsupported file formats and print an error message.
       System.err.println("Unsupported file format: " + new File(filePath).getName());
       return null;
     }

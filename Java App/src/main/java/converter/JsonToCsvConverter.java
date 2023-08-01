@@ -15,6 +15,7 @@ import com.opencsv.CSVWriter;
  */
 public class JsonToCsvConverter {
 
+  // Private constructor to prevent instantiation, as this is a utility class.
   private JsonToCsvConverter() {}
 
   /**
@@ -27,9 +28,14 @@ public class JsonToCsvConverter {
    */
   public static String convertJsonStringToCsv(String jsonData, String outputFolder)
       throws IOException {
+    // Create an ObjectMapper instance to handle JSON parsing.
     ObjectMapper objectMapper = new ObjectMapper();
+
+    // Define a TypeReference to specify the target data structure (List of Maps).
     TypeReference<List<Map<String, Object>>> typeRef =
         new TypeReference<List<Map<String, Object>>>() {};
+
+    // Read the JSON data into a List of Maps using the ObjectMapper.
     List<Map<String, Object>> data = objectMapper.readValue(jsonData, typeRef);
 
     // Create the output folder if it doesn't exist.
@@ -38,13 +44,14 @@ public class JsonToCsvConverter {
       outputDir.mkdirs();
     }
 
-    // Generate the CSV file with a default name.
+    // Generate the CSV file with a default name ("output.csv").
     String csvFileName = "output.csv";
     File csvFile = new File(outputFolder, csvFileName);
 
+    // Open a CSVWriter to write the data into the CSV file.
     try (CSVWriter csvWriter = new CSVWriter(new FileWriter(csvFile))) {
       if (!data.isEmpty()) {
-        // Write the column headings based on the first row's keys.
+        // Write the column headings based on the keys of the first row (Map) in the data.
         Map<String, Object> firstRow = data.get(0);
         String[] header = firstRow.keySet().toArray(new String[0]);
         csvWriter.writeNext(header);
@@ -60,6 +67,7 @@ public class JsonToCsvConverter {
       }
     }
 
+    // Return the absolute path of the generated CSV file.
     return csvFile.getAbsolutePath();
   }
 }
