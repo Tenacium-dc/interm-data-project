@@ -1,0 +1,14 @@
+name: Run tfsec with sarif upload
+
+on: [push]
+
+jobs:
+  tfsec_sarif:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Run tfsec with sarif upload
+      uses: aquasecurity/tfsec-sarif-action@v0.1.4
