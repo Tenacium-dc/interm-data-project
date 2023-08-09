@@ -1,0 +1,5 @@
+# 
+
+name: "my_detection"
+tables:
+  - "test_log_source"
