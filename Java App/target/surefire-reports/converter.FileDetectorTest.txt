@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: converter.FileDetectorTest
 -------------------------------------------------------------------------------
-Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s - in converter.FileDetectorTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.026 s - in converter.FileDetectorTest
