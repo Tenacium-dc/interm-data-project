@@ -1,0 +1,23 @@
+# 
+name: "road_transport_test"
+
+transform: |-
+  .local_authority_code = del(.json.local_authority_code)
+  .region = del(.json.region)
+  .local_authority = del(.json.local_authority)
+  .diesel_cars_total = del(.json.diesel_cars_total)
+  .petrol_cars_total = del(.json.petrol_cars_total)
+  del(.json)
+schema:
+  fields:
+    - name: local_authority_code
+      type: string
+    - name: region
+      type: string
+    - name: local_authority
+      type: string
+    - name: diesel_cars_total
+      type: string
+    - name: petrol_cars_total
+      type: string
+  ecs_field_names: []

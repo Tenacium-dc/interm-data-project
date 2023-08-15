@@ -2,16 +2,17 @@
 name: "test_log_source"
 
 transform: |-
-  .passengerid = del(.passengerid)
-  .survived = del(.survived)
-  .test = del(.test)
+  .passengerid = del(.json.passengerid)
+  .survived = del(.json.survived)
+  .test = del(.json.test)
+  del(.json)
 
 schema:
   fields:
-    - name: "passengerid"
-      type: "int"
-    - name: "survived"
-      type: "int"
-    - name: "test"
-      type: "int"
+    - name: passengerid
+      type: int
+    - name: survived
+      type: int
+    - name: test
+      type: int
   ecs_field_names: []
