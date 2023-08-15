@@ -11,8 +11,6 @@ import java.util.Set;
  */
 public class InterfaceMain {
 
-  public static final String API_KEY = "API KEY";
-
   /**
    * Main entry point of the program.
    *
