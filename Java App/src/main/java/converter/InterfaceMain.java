@@ -26,32 +26,36 @@ public class InterfaceMain {
 
     // Get a list of files from the source folder.
     File[] filesInSourceFolder = new File(sourceFolder).listFiles();
-    if (filesInSourceFolder != null) {
-      // Loop through each file in the source folder for conversion.
-      for (File file : filesInSourceFolder) {
-        try {
-          // Detect the file type using the FileDetector class.
-          String fileType = FileDetector.detectFileType(file.getAbsolutePath());
-          // If the file type is not supported, add it to the set and continue to the next file.
-          if (fileType.equals("File type is not supported")) {
-            unsupportedFiles.add(file.getName());
-            continue;
-          }
-          // Convert the file to CSV and get the path of the generated CSV file.
-          String csvFilePath = convertFileToCsv(fileType, file.getAbsolutePath(), outputFolder);
-          if (csvFilePath != null) {
-            // Print success message if the conversion was successful.
-            System.out.println(
-                "Converted " + fileType + " file: " + file.getName() + " to CSV: " + csvFilePath);
-          } else {
-            // Print error message if the conversion failed.
-            System.out.println("Failed to convert " + fileType + " file: " + file.getName());
-          }
-        } catch (IOException e) {
-          // Print error message and stack trace if an I/O error occurs during conversion.
-          System.err.println("Error converting file: " + file.getName());
-          e.printStackTrace();
+
+    if (filesInSourceFolder == null || filesInSourceFolder.length == 0) {
+      System.err.println("No files found in the source folder.");
+      return; // Exit the program if no files are found.
+    }
+
+    // Loop through each file in the source folder for conversion.
+    for (File file : filesInSourceFolder) {
+      try {
+        // Detect the file type using the FileDetector class.
+        String fileType = FileDetector.detectFileType(file.getAbsolutePath());
+        // If the file type is not supported, add it to the set and continue to the next file.
+        if (fileType.equals("File type is not supported")) {
+          unsupportedFiles.add(file.getName());
+          continue;
         }
+        // Convert the file to CSV and get the path of the generated CSV file.
+        String csvFilePath = convertFileToCsv(fileType, file.getAbsolutePath(), outputFolder);
+        if (csvFilePath != null) {
+          // Print success message if the conversion was successful.
+          System.out.println(
+              "Converted " + fileType + " file: " + file.getName() + " to CSV: " + csvFilePath);
+        } else {
+          // Print error message if the conversion failed.
+          System.out.println("Failed to convert " + fileType + " file: " + file.getName());
+        }
+      } catch (IOException e) {
+        // Print error message and stack trace if an I/O error occurs during conversion.
+        System.err.println("Error converting file: " + file.getName());
+        e.printStackTrace();
       }
     }
 
