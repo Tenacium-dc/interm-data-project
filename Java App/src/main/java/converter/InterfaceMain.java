@@ -1,78 +1,97 @@
 package converter;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * The main class to convert files of different types to CSV format.
- */
 public class InterfaceMain {
 
+  // Set to store unsupported files encountered during processing
+  private static Set<String> unsupportedFiles = new HashSet<>();
+
   /**
-   * Main entry point of the program.
-   *
-   * @param args Command-line arguments (not used in this implementation).
+   * The main method that carries out the conversion process.
+   * 
+   * @param args Command-line arguments (not used in this context).
    */
   public static void main(String[] args) {
-    // The file directories are for local testing; they will be changed in the AWS instance.
     String sourceFolder = "C:\\Users\\tejas\\Documents\\Interface Files Store";
     String outputFolder = "C:\\Users\\tejas\\Documents\\CSV Outputs";
 
-    // A set to store names of unsupported files during conversion.
-    Set<String> unsupportedFiles = new HashSet<>();
+    Set<String> infectedFiles = new HashSet<>(); // Set to store infected files detected by ClamAV
 
-    // Get a list of files from the source folder.
     File[] filesInSourceFolder = new File(sourceFolder).listFiles();
 
     if (filesInSourceFolder == null || filesInSourceFolder.length == 0) {
       System.err.println("No files found in the source folder.");
-      return; // Exit the program if no files are found.
+      return;
     }
 
-    // Loop through each file in the source folder for conversion.
+    ClamAVService clamAVService = new ClamAVService(); // Initialise ClamAVService
+
+    // Iterate through each file in the source folder
     for (File file : filesInSourceFolder) {
       try {
-        // Detect the file type using the FileDetector class.
-        String fileType = FileDetector.detectFileType(file.getAbsolutePath());
-        // If the file type is not supported, add it to the set and continue to the next file.
-        if (fileType.equals("File type is not supported")) {
-          unsupportedFiles.add(file.getName());
-          continue;
-        }
-        // Convert the file to CSV and get the path of the generated CSV file.
-        String csvFilePath = convertFileToCsv(fileType, file.getAbsolutePath(), outputFolder);
-        if (csvFilePath != null) {
-          // Print success message if the conversion was successful.
-          System.out.println(
-              "Converted " + fileType + " file: " + file.getName() + " to CSV: " + csvFilePath);
+        if (clamAVService.ping()) {
+          // Scan the file for malware
+          VirusScanResult scanResult = clamAVService.scan(new FileInputStream(file));
+
+          if (scanResult.getStatus() == VirusScanStatus.PASSED) {
+            System.out.println("Passed malware scan: " + file.getName());
+
+            // File passed malware scan, proceed with conversion
+            String fileType = FileDetector.detectFileType(file.getAbsolutePath());
+
+            // Convert the file to CSV and get the path of the generated CSV file.
+            String csvFilePath = convertFileToCsv(fileType, file.getAbsolutePath(), outputFolder);
+
+            if (csvFilePath != null) {
+              // Print success message if the conversion was successful.
+              System.out.println(
+                  "Converted " + fileType + " file: " + file.getName() + " to CSV: " + csvFilePath);
+            } else {
+              // Print error message if the conversion failed.
+              System.out.println("Failed to convert " + fileType + " file: " + file.getName());
+            }
+          } else {
+            // File failed malware scan
+            infectedFiles.add(file.getName() + ": " + scanResult.getResult());
+          }
         } else {
-          // Print error message if the conversion failed.
-          System.out.println("Failed to convert " + fileType + " file: " + file.getName());
+          System.out.println("ClamAV did not respond to the ping request!");
+          unsupportedFiles.add(file.getName() + ": ClamAV issue");
         }
       } catch (IOException e) {
-        // Print error message and stack trace if an I/O error occurs during conversion.
         System.err.println("Error converting file: " + file.getName());
         e.printStackTrace();
       }
     }
 
-    // Print unsupported files that were detected during conversion.
-    for (String fileName : unsupportedFiles) {
-      System.err.println("File type is not supported: " + fileName);
+    // Print the list of infected files
+    for (String fileName : infectedFiles) {
+      System.err.println("Malware detected in file: " + fileName);
+    }
+
+    // Print the list of unsupported files or ClamAV issues
+    if (!unsupportedFiles.isEmpty()) {
+      System.err.println("Unsupported file formats or ClamAV issues:");
+      for (String fileName : unsupportedFiles) {
+        System.err.println(fileName);
+      }
     }
   }
 
   /**
-   * Converts a file of a given type to CSV format.
-   *
-   * @param fileType The type of the file.
-   * @param filePath The path of the input file.
-   * @param outputFolder The output folder to save the generated CSV file.
-   * @return The path of the generated CSV file, or null if conversion fails.
-   * @throws IOException If an I/O error occurs.
+   * Converts a given file to CSV format based on its file type.
+   * 
+   * @param fileType The type of the input file.
+   * @param filePath The path to the input file.
+   * @param outputFolder The folder where the CSV output will be stored.
+   * @return The path to the generated CSV file, or null if conversion failed or unsupported.
+   * @throws IOException If an I/O error occurs during the conversion process.
    */
   private static String convertFileToCsv(String fileType, String filePath, String outputFolder)
       throws IOException {
@@ -82,7 +101,6 @@ public class InterfaceMain {
         case "Excel":
           return ExcelToCsvConverter.convertExcelToCsv(filePath, outputFolder);
         case "JSON":
-          // Read JSON data from the input file and convert it to CSV using JsonToCsvConverter.
           String jsonData = new String(Files.readAllBytes(new File(filePath).toPath()));
           return JsonToCsvConverter.convertJsonStringToCsv(jsonData, outputFolder);
         case "Avro":
@@ -90,12 +108,11 @@ public class InterfaceMain {
         case "Parquet":
           return ParquetToCsvConverter.convertParquetToCsv(filePath, outputFolder);
         default:
-          // Throw an exception for unsupported file types.
-          throw new IOException("Unsupported file format: " + fileType);
+          unsupportedFiles.add("Unsupported file format: " + new File(filePath).getName());
+          return null;
       }
     } catch (IllegalArgumentException e) {
-      // Catch any exceptions related to unsupported file formats and print an error message.
-      System.err.println("Unsupported file format: " + new File(filePath).getName());
+      unsupportedFiles.add("Unsupported file format: " + new File(filePath).getName());
       return null;
     }
   }
