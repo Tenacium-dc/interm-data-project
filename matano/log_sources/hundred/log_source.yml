@@ -1,0 +1,32 @@
+# 
+name: "hundred"
+
+transform: |-
+  .key = del(.json.key)
+  .fare_amount = del(.json.fare_amount)
+  .pickup_datetime = del(.json.lpickup_datetime)
+  .pickup_longitude = del(.json.pickup_longitude)
+  .pickup_latitude = del(.json.pickup_latitude)
+  .dropoff_longitude = del(.json.dropoff_longitude)
+  .dropoff_latitude = del(.json.dropoff_latitude)
+  .passenger_count = del(.json.passenger_count)
+  del(.json)
+schema:
+  fields:
+    - name: key
+      type: string
+    - name: fare_amount
+      type: string
+    - name: pickup_datetime
+      type: string
+    - name: pickup_longitude
+      type: string
+    - name: pickup_latitude
+      type: string
+    - name: dropoff_longitude
+      type: string
+    - name: dropoff_latitude
+      type: string
+    - name: passenger_count
+      type: string
+  ecs_field_names: []
