@@ -10,6 +10,14 @@ variable "ec2_instance_key" {
     type = string
 }
 
+terraform {
+  backend "s3" {
+    bucket = "mayura-terraform-state"
+    key = "terraform-state"
+    region = "eu-west-1"
+  }
+}
+
 provider "aws" {
     region = "eu-west-1"
 }
