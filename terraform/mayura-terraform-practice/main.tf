@@ -26,5 +26,8 @@ resource "aws_instance" "mayura_terraform_test" {
     availability_zone = "eu-west-1c"
     key_name = var.ec2_instance_key
     associate_public_ip_address = true
+    tags = {
+        Name = "ubuntu-instance"
+    }
 }
 
