@@ -1,0 +1,14 @@
+checks:
+  - code: CUS001
+    description: Custom check to ensure the Name tag is applied to Resources Group Module 
+    impact:  By not having Name Tag we can't keep track of our Resources
+    requiredTypes:
+      - module
+    requiredLabels:
+      - resource_group
+    severity: MEDIUM
+    matchSpec:
+     name: tag_map
+     action: contains
+     value: Name
+    errorMessage: The required Name tag was missing
