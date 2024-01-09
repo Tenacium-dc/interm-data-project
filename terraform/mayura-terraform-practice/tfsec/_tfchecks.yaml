@@ -1,3 +1,4 @@
+---
 checks:
   - code: CUS001
     description: Custom check to ensure the Name tag is applied to Resources Group Module 
