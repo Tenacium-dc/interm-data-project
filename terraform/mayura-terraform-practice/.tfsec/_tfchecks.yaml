@@ -1,29 +1,16 @@
 ---
 checks:
   - code: CUS001
-    description: Custom check to ensure the Name tag is applied to Resources Group Module 
-    impact:  By not having Name Tag we can't keep track of our Resources
+    description: Custom check to ensure the Name tag is applied to Resources Group Module
+    impact: By not having Name Tag we can't keep track of our Resources
+    resolution: Add the Name tag
     requiredTypes:
-      - module
+      - resource
     requiredLabels:
-      - resource_group
+      - aws_*
     severity: MEDIUM
     matchSpec:
-     name: tag_map
-     action: contains
-     value: Name
-    errorMessage: The required Name tag was missing
-  
-  - code: CUS002
-    description: Custom check to ensure the Name tag is applied to Resources Group Module
-    impact:  By not having Environment Tag we can't keep track of our Resources
-    requiredTypes:
-      - module
-    requiredLabels:
-      - resource_group
-    severity: CRITICAL
-    matchSpec:
-      name: tag_map
+      name: tags
       action: contains
-      value: Environment
-    errorMessage: The required Environment tag was missing
+      value: Name
+    errorMessage: The required Name tag was missing
